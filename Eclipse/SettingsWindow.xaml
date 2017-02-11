@@ -1,0 +1,17 @@
+﻿<Window x:Class="Eclipse.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Eclipse"
+        mc:Ignorable="d"
+        Title="Settings" Height="275" Width="300"
+        BorderThickness="0" WindowStyle="ToolWindow" ResizeMode="CanMinimize">
+    <Grid Margin="0,0,-0.333,0.333" Height="247" VerticalAlignment="Bottom">
+        <Label x:Name="LabelMenuSize" Content="Menu Size:" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="53,13,0,204" Width="75" Height="30"/>
+        <TextBox x:Name="TextBoxMenuSize" HorizontalAlignment="Left" Height="23" Margin="133,13,0,204" TextWrapping="Wrap" Text="" VerticalAlignment="Center" Width="100" VerticalContentAlignment="Center"/>
+        <Label x:Name="LabelOpenDelay" Content="Open Delay:" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="53,52,0,165" Height="30"/>
+        <TextBox x:Name="TextBoxOpenDelay" HorizontalAlignment="Left" Height="23" Margin="133,56,0,168" TextWrapping="Wrap" Text="" VerticalAlignment="Center" Width="100" VerticalContentAlignment="Center"/>
+        <Button x:Name="ButtonSave" Content="Save" HorizontalAlignment="Left" Margin="102,112,0,0" VerticalAlignment="Top" Width="93"/>
+    </Grid>
+</Window>
