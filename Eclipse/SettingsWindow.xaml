@@ -8,10 +8,11 @@
         Title="Settings" Height="275" Width="300"
         BorderThickness="0" WindowStyle="ToolWindow" ResizeMode="CanMinimize">
     <Grid Margin="0,0,-0.333,0.333" Height="247" VerticalAlignment="Bottom">
-        <Label x:Name="LabelMenuSize" Content="Menu Size:" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="53,13,0,204" Width="75" Height="30"/>
-        <TextBox x:Name="TextBoxMenuSize" HorizontalAlignment="Left" Height="23" Margin="133,13,0,204" TextWrapping="Wrap" Text="" VerticalAlignment="Center" Width="100" VerticalContentAlignment="Center"/>
-        <Label x:Name="LabelOpenDelay" Content="Open Delay:" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="53,52,0,165" Height="30"/>
-        <TextBox x:Name="TextBoxOpenDelay" HorizontalAlignment="Left" Height="23" Margin="133,56,0,168" TextWrapping="Wrap" Text="" VerticalAlignment="Center" Width="100" VerticalContentAlignment="Center"/>
+        <Label x:Name="LabelMenuSize" Content="Menu Size:" HorizontalAlignment="Left" HorizontalContentAlignment="Right" VerticalAlignment="Center" Margin="0,13,0,204" Width="110" Height="30"/>
+        <TextBox x:Name="TextBoxMenuSize" HorizontalAlignment="Left" HorizontalContentAlignment="Left" Height="23" Margin="110,12,0,204" TextWrapping="Wrap" Text="" VerticalAlignment="Center" Width="100" VerticalContentAlignment="Center"/>
+        <Label x:Name="LabelOpenDelay" Content="Open Delay(ms):" HorizontalAlignment="Left" HorizontalContentAlignment="Right" VerticalAlignment="Center" Margin="0,52,0,165" Width="110" Height="30"/>
+        <TextBox x:Name="TextBoxOpenDelay" HorizontalAlignment="Left" HorizontalContentAlignment="Left" Height="23" Margin="110,55,0,168" TextWrapping="Wrap" Text="" VerticalAlignment="Center" Width="100" VerticalContentAlignment="Center"/>
         <Button x:Name="ButtonSave" Content="Save" HorizontalAlignment="Left" Margin="102,112,0,0" VerticalAlignment="Top" Width="93"/>
+        <Button x:Name="ButtonClear" Content="Clear Clips" HorizontalAlignment="Left" VerticalAlignment="Top" Width="93" Margin="102,153,0,0"/>
     </Grid>
 </Window>

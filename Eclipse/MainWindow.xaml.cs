@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Hardcodet.Wpf.TaskbarNotification;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+//using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -17,12 +19,16 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using NLog;
+using Newtonsoft.Json;
 
 namespace Eclipse
 {
     public partial class MainWindow : Window
     {
         public static MainWindow mywindow { get; private set; } // for static functions
+        private static RightClickMenu rcm;
+        private static Logger _logger = LogManager.GetCurrentClassLogger();
 
         /*   KEY EVENT HOOKS   */
         private const int WH_KEYBOARD_LL = 13;
@@ -34,7 +40,7 @@ namespace Eclipse
         private static IntPtr hwndid = IntPtr.Zero;
 
         /*   MENU SETTINGS   */
-        private const double MenuSize = 220;
+        private static double MenuSize = Properties.Settings.Default.MenuSize;
         private const double MenuTipSize = 120;
         private const double MenuItemCount = 8;
         private const double MenuItemPadding = 2;
@@ -56,6 +62,7 @@ namespace Eclipse
             InitializeComponent();
 
             mywindow = this;
+            rcm = new RightClickMenu();
 
             Topmost = true;
             ShowInTaskbar = false;
@@ -68,18 +75,61 @@ namespace Eclipse
             Container.RenderTransform = new ScaleTransform(0, 0);
             MenuCenter = new Point(Width / 2, Height / 2);
 
+            _logger.Debug("Init center {0},{1} and size {2},{3}", MenuCenter.X, MenuCenter.Y, Width, Height);
+
             // Initialize Menu
             for(int i = 0; i < MenuItemCount; i++)
             {
                 Path TempMenuTip = CreateMenuItemTip(i);
                 TempMenuTip.MouseEnter += MenuItem_MouseEnter;
                 TempMenuTip.MouseLeave += MenuItem_MouseLeave;
+                TempMenuTip.MouseRightButtonUp += MenuItem_MouseRightButtonUp;
                 //MenuItems.Add(TempMenuTip);
                 Container.Children.Add(TempMenuTip);
             }
+            _logger.Debug("Added {0} menu items", MenuItemCount);
 
             hwndid = SetHook(llkp);
+
+            if(Properties.Settings.Default.Clips != null)
+            {
+                foreach (string clip in Properties.Settings.Default.Clips)
+                {
+                    string breaking = clip;
+                }
+            }
+            else
+            {
+                Properties.Settings.Default.Clips = new System.Collections.Specialized.StringCollection();
+            }
         }
+
+        private void MenuItem_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            Matrix mymatrix = PresentationSource.FromVisual(mywindow).CompositionTarget.TransformFromDevice;
+            Point mouse = mymatrix.Transform(GetMousePosition());
+            rcm.Left = mouse.X;
+            rcm.Top = mouse.Y;
+            if (rcm.Shown)
+            {
+                rcm.Hide();
+                rcm.Shown = false;
+                return;
+            }
+
+            int clipCount = (Properties.Settings.Default.Clips.Count > 5) ? 5 : Properties.Settings.Default.Clips.Count;
+            for (int i = 0; i < clipCount; i++)
+            {
+                string clipText = Properties.Settings.Default.Clips[i].ToString();
+                if (clipText.Length > 100) { clipText.Substring(0, 100); }
+                rcm.listBoxClips.Items.Add(new ListBoxItem() { Content = clipText });
+            }
+
+            rcm.Shown = true;
+            rcm.Topmost = true;
+            rcm.Show();
+        }
+
         protected override void OnSourceInitialized(EventArgs e)
         {
             base.OnSourceInitialized(e);
@@ -116,13 +166,90 @@ namespace Eclipse
 
         private void OnClipboardChanged()
         {
+            _logger.Debug("Clipboard caught");
+            //TaskbarIcon notifyicon = (TaskbarIcon)FindResource("NotifyIcon");
+            //notifyicon.ShowBalloonTip("Eclipse", "Contents saved to Eclipse.", BalloonIcon.Info);
             try
             {
-                if (Clipboard.ContainsText()) { Console.WriteLine(Clipboard.GetText()); }
+                if (Clipboard.ContainsText())
+                {
+                    Clip currentClip = new Clip()
+                    {
+                        ClipData = Clipboard.GetText()
+                    };
+
+                    // get window that copy came from
+                    const int nChars = 256;
+                    StringBuilder Buff = new StringBuilder(nChars);
+                    IntPtr handle = GetForegroundWindow();
+
+                    if (GetWindowText(handle, Buff, nChars) > 0)
+                    {
+                        // get window name, process id and icon
+                        string windowName = Buff.ToString();
+                        int windowTID = (int)GetWindowThreadProcessId(handle, out uint windowPID);
+                        if (windowPID < 0)
+                        {
+                            _logger.Error("Failed to get windowPID.");
+                            return;
+                        }
+                        Process windowProcess = Process.GetProcessById((int)windowPID);
+                        _logger.Debug("Process name {0}", windowProcess.ProcessName);
+                        try
+                        {
+                            currentClip.ProcessName = windowProcess.ProcessName;
+                        }
+                        catch(Exception exc)
+                        {
+                            _logger.Error(exc, "Failed to save process name.");
+                            return;
+                        }
+                        try
+                        {
+                            string windowPath = windowProcess.MainModule.FileName;
+                            _logger.Debug("Process path {0}", windowPath);
+                            System.Drawing.Icon windowIcon = System.Drawing.Icon.ExtractAssociatedIcon(windowPath); //ambiguity between Window.Icon and System.Drawing.Icon
+                            ImageSource imageIconSource = Imaging.CreateBitmapSourceFromHIcon(
+                                windowIcon.Handle,
+                                new Int32Rect(0, 0, windowIcon.Width, windowIcon.Height),
+                                BitmapSizeOptions.FromEmptyOptions());
+                            Image imageIcon = new Image()
+                            {
+                                Name = windowProcess.ProcessName,
+                                Source = imageIconSource,
+                                Width = 32,
+                                Height = 32,
+                                Margin = new Thickness(0, 0, 0, 0) // todo: get actual coords from math
+                            };
+                            Container.Children.Add(imageIcon);
+                            using (System.IO.MemoryStream ms = new System.IO.MemoryStream()) // ambiguity between System.IO and System.Windows.Shapes
+                            {
+                                windowIcon.Save(ms);
+                                currentClip.ProcessIcon = Convert.ToBase64String(ms.ToArray());
+                            }
+                        }
+                        catch(Exception exc)
+                        {
+                            _logger.Error(exc, "Failed to add icon. " + exc.Message);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        currentClip.ProcessName = "Eclipse";
+                        currentClip.ProcessIcon = "";
+                    }
+
+                    Properties.Settings.Default.Clips.Add(JsonConvert.SerializeObject(currentClip, Formatting.None));
+                    Properties.Settings.Default.Save();
+
+                    _logger.Debug("Saved text data to clipboard.");
+                }
                 else if (Clipboard.ContainsImage())
                 {
                     Popup popimg = new Popup();
                     ImageSource img;
+                    _logger.Debug("Saved image data to clipboard.");
                     //System.IO.MemoryStream msimg = Clipboard.GetData("DeviceIndependentBitmap") as System.IO.MemoryStream;
                     //msimg.WriteTo(new System.IO.FileStream("c:\\users\\clanum\\downloads\\test.bmp", System.IO.FileMode.Create, System.IO.FileAccess.ReadWrite));
                     //Console.WriteLine("Saved new image.");
@@ -158,7 +285,8 @@ namespace Eclipse
             }
             catch (COMException ex)
             {
-                // todo
+                _logger.Error(ex, "Clipboard event error.");
+                return;
             }
         }
 
@@ -180,7 +308,7 @@ namespace Eclipse
                         if (KeyDownTime != DateTime.MinValue)
                         {
                             TimeSpan KeyDownLength = (DateTime.Now - KeyDownTime);
-                            if (KeyDownLength.TotalSeconds > 1.5)
+                            if (KeyDownLength.TotalMilliseconds > Properties.Settings.Default.OpenDelay)
                             {
                                 // open menu
                                 MenuOpen = true;
@@ -274,6 +402,12 @@ namespace Eclipse
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
+        [DllImport("user32.dll")]
+        static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr GetModuleHandle(string lpModuleName);
 
@@ -294,7 +428,10 @@ namespace Eclipse
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool AddClipboardFormatListener(IntPtr hwnd);
 
-        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint ProcessId);
+
+        [DllImport("gdi32.dll")]
         public static extern bool DeleteObject(IntPtr hObject);
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)

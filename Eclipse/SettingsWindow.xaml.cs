@@ -15,12 +15,19 @@ namespace Eclipse
             TextBoxOpenDelay.Text = Properties.Settings.Default.OpenDelay.ToString();
 
             /*   Control Events   */
-            //TextBoxMenuSize.PreviewTextInput += TextBoxMenuSize_PreviewTextInput;
-            TextBoxMenuSize.PreviewKeyDown += TextBoxMenuSize_PreviewKeyDown;
+            TextBoxMenuSize.PreviewKeyDown += TextBox_PreviewKeyDown;
+            TextBoxOpenDelay.PreviewKeyDown += TextBox_PreviewKeyDown;
             ButtonSave.Click += ButtonSave_Click;
+            ButtonClear.Click += ButtonClear_Click;
         }
 
-        private void TextBoxMenuSize_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        private void ButtonClear_Click(object sender, RoutedEventArgs e)
+        {
+            Properties.Settings.Default.Clips.Clear();
+            Properties.Settings.Default.Save();
+        }
+
+        private void TextBox_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             Regex regex = new Regex(@"[0-9+\-\/\*\(\)]");
 
@@ -30,6 +37,8 @@ namespace Eclipse
         private void ButtonSave_Click(object sender, RoutedEventArgs e)
         {
             Properties.Settings.Default.MenuSize = Int32.Parse(TextBoxMenuSize.Text);
+            Properties.Settings.Default.OpenDelay = Int32.Parse(TextBoxOpenDelay.Text);
+            Properties.Settings.Default.Save();
         }
     }
 }
